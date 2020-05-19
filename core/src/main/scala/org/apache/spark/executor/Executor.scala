@@ -39,7 +39,7 @@ import org.apache.spark._
 import org.apache.spark.deploy.SparkHadoopUtil
 import org.apache.spark.internal.Logging
 import org.apache.spark.internal.config._
-import org.apache.spark.internal.plugin.PluginContainer
+import org.apache.spark.internal.plugin.{ExecutorPluginContainer, PluginContainer}
 import org.apache.spark.memory.{SparkOutOfMemoryError, TaskMemoryManager}
 import org.apache.spark.metrics.source.JVMCPUSource
 import org.apache.spark.resource.ResourceInformation
@@ -157,6 +157,8 @@ private[spark] class Executor(
   private val plugins: Option[PluginContainer] = Utils.withContextClassLoader(replClassLoader) {
     PluginContainer(env, resources.asJava)
   }
+
+  private var userPlugins: Option[PluginContainer] = None
 
   // Max size of direct result. If task result is bigger than this, we use the block manager
   // to send the result back.
@@ -285,6 +287,9 @@ private[spark] class Executor(
       // Notify plugins that executor is shutting down so they can terminate cleanly
       Utils.withContextClassLoader(replClassLoader) {
         plugins.foreach(_.shutdown())
+        if(userPlugins != None) {
+          userPlugins.foreach(_.shutdown())
+        }
       }
       if (!isLocal) {
         env.stop()
@@ -402,6 +407,11 @@ private[spark] class Executor(
         Executor.taskDeserializationProps.set(taskDescription.properties)
 
         updateDependencies(taskDescription.addedFiles, taskDescription.addedJars)
+
+        userPlugins = Utils.withContextClassLoader(replClassLoader) {
+          PluginContainer(env, resources.asJava, USER_PLUGINS)
+        }
+
         task = ser.deserialize[Task[Any]](
           taskDescription.serializedTask, Thread.currentThread.getContextClassLoader)
         task.localProperties = taskDescription.properties

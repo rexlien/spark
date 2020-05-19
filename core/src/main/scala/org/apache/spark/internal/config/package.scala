@@ -1235,6 +1235,16 @@ package object config {
       .toSequence
       .createWithDefault(Nil)
 
+  private[spark] val USER_PLUGINS =
+    ConfigBuilder("spark.user.plugins")
+      .withPrepended(DEFAULT_PLUGINS_LIST, separator = ",")
+      .doc("Comma-separated list of class names implementing " +
+        "org.apache.spark.api.plugin.SparkPlugin to load into the application.")
+      .stringConf
+      .toSequence
+      .createWithDefault(Nil)
+
+
   private[spark] val CLEANER_PERIODIC_GC_INTERVAL =
     ConfigBuilder("spark.cleaner.periodicGC.interval")
       .timeConf(TimeUnit.SECONDS)
