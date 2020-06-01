@@ -158,8 +158,13 @@ private[spark] class Executor(
     PluginContainer(env, resources.asJava)
   }
 
-  private var userPlugins: Option[PluginContainer] = None
+  // private var userPlugins: Option[PluginContainer] = None
 
+  private lazy val userPlugins = {
+    Utils.withContextClassLoader(replClassLoader) {
+      PluginContainer(env, resources.asJava, USER_PLUGINS)
+    }
+  }
   // Max size of direct result. If task result is bigger than this, we use the block manager
   // to send the result back.
   private val maxDirectResultSize = Math.min(
@@ -408,9 +413,7 @@ private[spark] class Executor(
 
         updateDependencies(taskDescription.addedFiles, taskDescription.addedJars)
 
-        userPlugins = Utils.withContextClassLoader(replClassLoader) {
-          PluginContainer(env, resources.asJava, USER_PLUGINS)
-        }
+        userPlugins
 
         task = ser.deserialize[Task[Any]](
           taskDescription.serializedTask, Thread.currentThread.getContextClassLoader)
