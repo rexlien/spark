@@ -152,12 +152,36 @@ object PluginContainer {
     PluginContainer(Right(env), resources)
   }
 
+  def apply(
+             env: SparkEnv,
+             resources: java.util.Map[String, ResourceInformation],
+             configs: ConfigEntry[Seq[String]]
+           ): Option[PluginContainer] = {
+    PluginContainer(Right(env), resources, configs)
+  }
+
+
 
   private def apply(
       ctx: Either[SparkContext, SparkEnv],
       resources: java.util.Map[String, ResourceInformation]): Option[PluginContainer] = {
     val conf = ctx.fold(_.conf, _.conf)
     val plugins = Utils.loadExtensions(classOf[SparkPlugin], conf.get(PLUGINS).distinct, conf)
+    if (plugins.nonEmpty) {
+      ctx match {
+        case Left(sc) => Some(new DriverPluginContainer(sc, resources, plugins))
+        case Right(env) => Some(new ExecutorPluginContainer(env, resources, plugins))
+      }
+    } else {
+      None
+    }
+  }
+
+  private def apply(ctx: Either[SparkContext, SparkEnv],
+                    resources: java.util.Map[String, ResourceInformation],
+                    configs: ConfigEntry[Seq[String]]): Option[PluginContainer] = {
+    val conf = ctx.fold(_.conf, _.conf)
+    val plugins = Utils.loadExtensions(classOf[SparkPlugin], conf.get(configs).distinct, conf)
     if (plugins.nonEmpty) {
       ctx match {
         case Left(sc) => Some(new DriverPluginContainer(sc, resources, plugins))
