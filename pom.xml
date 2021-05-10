@@ -85,8 +85,11 @@
     <repository>
       <id>rlien-bintray</id>
       <name>rlien-java</name>
-      <url>https://api.bintray.com/maven/rlien/java/spark/;publish=1;override=1</url>
+      <url>https://api.bintray.com/maven/rlien-2/java/spark/;publish=1;override=1</url>
     </repository>
+    <relocation>
+      <groupId>xln</groupId>
+    </relocation>
   </distributionManagement>
 
   <modules>
